@@ -1,9 +1,9 @@
 import json
 import os
+import time
 import pika
 import logging
 
-from app import models
 from app.config import settings
 from app import models, database
 
@@ -44,7 +44,15 @@ def start_consumer():
         retry_delay=2,
     )
 
-    connection = pika.BlockingConnection(parameters)
+    while True:
+        try:
+            logger.info("Connecting to RabbitMQ host=%s ...", settings.rabbitmq_host)
+            connection = pika.BlockingConnection(parameters)
+            break
+        except Exception as e:
+            logger.error("RabbitMQ not ready / DNS fail (%s). Retrying in 3s...", e)
+            time.sleep(3)
+
     channel = connection.channel()
     channel.queue_declare(queue=settings.payment_confirmed_queue, durable=True)
 
