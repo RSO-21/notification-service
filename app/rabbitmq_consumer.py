@@ -1,11 +1,14 @@
 import json
 import os
 import time
+from typing import Optional
+from fastapi import Header
 import pika
 import logging
 
 from app.config import settings
 from app import models, database
+from app.database import get_db_session as get_db
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -69,33 +72,33 @@ def start_consumer():
             user_id = payload.get("user_id", "unknown")
             amount = payload.get("amount")
 
-            db = database.get_db_session(schema=tenant_id)
-            try:
-                title = "Payment successful" if str(payment_status).upper() == "PAID" else "Payment update"
-                msg = f"Order {order_id} payment status: {payment_status}"
+            with get_db(schema=tenant_id) as db:
+                try:
+                    title = "Payment successful" if str(payment_status).upper() == "PAID" else "Payment update"
+                    msg = f"Order {order_id} payment status: {payment_status}"
 
-                meta = {
-                    "tenant_id": tenant_id,
-                    "order_id": order_id,
-                    "payment_id": payment_id,
-                    "payment_status": payment_status,
-                }
-                if amount is not None:
-                    meta["amount"] = amount
+                    meta = {
+                        "tenant_id": tenant_id,
+                        "order_id": order_id,
+                        "payment_id": payment_id,
+                        "payment_status": payment_status,
+                    }
+                    if amount is not None:
+                        meta["amount"] = amount
 
-                n = models.Notification(
-                    user_id=str(user_id),
-                    type="ORDER_PAID" if str(payment_status).upper() == "PAID" else "PAYMENT_STATUS",
-                    title=title,
-                    message=msg,
-                    meta=meta,
-                )
-                db.add(n)
-                db.commit()
+                    n = models.Notification(
+                        user_id=str(user_id),
+                        type="ORDER_PAID" if str(payment_status).upper() == "PAID" else "PAYMENT_STATUS",
+                        title=title,
+                        message=msg,
+                        meta=meta,
+                    )
+                    db.add(n)
+                    db.commit()
 
-                logger.info("Stored notification user=%s order=%s tenant=%s", user_id, order_id, tenant_id)
-            finally:
-                db.close()
+                    logger.info("Stored notification user=%s order=%s tenant=%s", user_id, order_id, tenant_id)
+                finally:
+                    db.close()
 
             ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception:
