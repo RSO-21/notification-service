@@ -20,7 +20,6 @@ class Base(DeclarativeBase):
 def get_db_session(schema: str = None):
     session = SessionLocal()
     try:
-        # Set search_path for this session
         session.execute(text(f"SET search_path TO {schema}"))
         yield session
     finally:

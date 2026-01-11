@@ -67,8 +67,6 @@ def start_consumer():
             order_id = payload.get("order_id")
             payment_id = payload.get("payment_id")
             payment_status = payload.get("payment_status")
-
-            # Optional fields if you add them later
             user_id = payload.get("user_id", "unknown")
             amount = payload.get("amount")
 

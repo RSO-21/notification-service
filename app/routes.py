@@ -27,7 +27,7 @@ def list_notifications(
 ):
     q = db.query(models.Notification).filter(models.Notification.user_id == user_id)
     if unread_only:
-        q = q.filter(models.Notification.is_read == False)  # noqa: E712
+        q = q.filter(models.Notification.is_read == False)
     return q.order_by(models.Notification.created_at.desc()).limit(limit).all()
 
 @router.post("/{notification_id}/read", response_model=NotificationOut)
