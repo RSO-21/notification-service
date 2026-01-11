@@ -92,6 +92,7 @@ def start_consumer():
                         title=title,
                         message=msg,
                         meta=meta,
+                        is_read=False
                     )
                     db.add(n)
                     db.commit()
