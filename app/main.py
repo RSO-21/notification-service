@@ -20,7 +20,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(notifications_router, prefix="/notifications")
 
 Instrumentator().instrument(app).expose(app)
 
@@ -46,3 +45,5 @@ def health(db: Session = Depends(get_db_with_schema)):
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Notification Microservice"}
+
+app.include_router(notifications_router)
