@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import Depends, FastAPI, Header
+from fastapi import Depends, FastAPI, Header, status, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -32,18 +32,16 @@ def get_db_with_schema(tenant_id: str = Depends(get_tenant_id)):
     with get_db_session(schema=tenant_id) as db:
         yield db
 
-@app.get("/health")
-def health_check(db: Session = Depends(get_db_with_schema)):
+@app.get("/health", tags=["health"])
+def health(db: Session = Depends(get_db_with_schema)):
     try:
         db.execute(text("SELECT 1"))
         return {"status": "ok", "db": "ok"}
     except Exception as e:
-        return {"status": "error", "db": "error", "detail": str(e)}
-    finally:
-        try:
-            db.close()
-        except Exception:
-            pass
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database unavailable: {e}",
+        )
 
 @app.get("/")
 def read_root():
