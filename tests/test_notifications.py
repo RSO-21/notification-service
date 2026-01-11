@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta
-
 from sqlalchemy import text
-
 from app.database import engine
 
 
@@ -35,7 +33,7 @@ def test_list_notifications_orders_and_limits(client):
     _insert_notification("tenant1", "u2", "other-user", False, base)
 
     r = client.get(
-        "/notifications/",
+        "/list_notifications",
         params={"user_id": "u1", "limit": 50},
         headers={"X-Tenant-Id": "tenant1"},
     )
@@ -46,7 +44,7 @@ def test_list_notifications_orders_and_limits(client):
     assert data[1]["title"] == "old"
 
     r2 = client.get(
-        "/notifications/",
+        "/list_notifications",
         params={"user_id": "u1", "limit": 1},
         headers={"X-Tenant-Id": "tenant1"},
     )
@@ -61,7 +59,7 @@ def test_list_notifications_unread_only(client):
     _insert_notification("tenant1", "u1", "read", True, base - timedelta(minutes=1))
 
     r = client.get(
-        "/notifications/",
+        "/list_notifications",
         params={"user_id": "u1", "unread_only": "true"},
         headers={"X-Tenant-Id": "tenant1"},
     )
@@ -87,7 +85,8 @@ def test_mark_read_success(client):
             {"created_at": base},
         ).scalar_one()
 
-    r = client.post(f"/notifications/{nid}/read", headers={"X-Tenant-Id": "tenant1"})
+    # Current route is POST "/{notification_id}/read"
+    r = client.post(f"/{nid}/read", headers={"X-Tenant-Id": "tenant1"})
     assert r.status_code == 200
     body = r.json()
     assert body["id"] == nid
@@ -95,7 +94,8 @@ def test_mark_read_success(client):
 
 
 def test_mark_read_404(client):
-    r = client.post("/notifications/999999/read", headers={"X-Tenant-Id": "tenant1"})
+    # Current route is POST "/{notification_id}/read"
+    r = client.post("/999999/read", headers={"X-Tenant-Id": "tenant1"})
     assert r.status_code == 404
     assert r.json()["detail"] == "Notification not found"
 
@@ -105,8 +105,16 @@ def test_tenant_isolation(client):
     _insert_notification("public", "u1", "public-note", False, base)
     _insert_notification("tenant1", "u1", "tenant-note", False, base)
 
-    r_public = client.get("/notifications/", params={"user_id": "u1"}, headers={"X-Tenant-Id": "public"})
-    r_tenant = client.get("/notifications/", params={"user_id": "u1"}, headers={"X-Tenant-Id": "tenant1"})
+    r_public = client.get(
+        "/list_notifications",
+        params={"user_id": "u1"},
+        headers={"X-Tenant-Id": "public"},
+    )
+    r_tenant = client.get(
+        "/list_notifications",
+        params={"user_id": "u1"},
+        headers={"X-Tenant-Id": "tenant1"},
+    )
 
     assert [n["title"] for n in r_public.json()] == ["public-note"]
     assert [n["title"] for n in r_tenant.json()] == ["tenant-note"]
