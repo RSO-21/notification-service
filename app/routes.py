@@ -18,7 +18,7 @@ def get_db_with_schema(tenant_id: str = Depends(get_tenant_id)):
     with get_db(schema=tenant_id) as db:
         yield db
 
-@router.get("/", response_model=List[NotificationOut])
+@router.get("/list_notifications", response_model=List[NotificationOut])
 def list_notifications(
     user_id: str,
     unread_only: bool = False,
