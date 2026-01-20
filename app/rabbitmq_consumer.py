@@ -6,6 +6,8 @@ from fastapi import Header
 import pika
 import logging
 
+from sqlalchemy import text
+
 from app.config import settings
 from app import models, database
 from app.database import get_db_session as get_db
@@ -22,7 +24,10 @@ def store_notification(db, tenant_id: str, user_id, order_id, payment_id, paymen
         title = "Payment successful"
 
     msg = f"Order {order_id} payment status: {payment_status}"
+    print("notif tenant_id", tenant_id)
 
+    db.execute(text(f"SET search_path TO public"))
+    
     n = models.Notification(
         user_id=str(user_id),
         type="PAYMENT_STATUS",
@@ -63,12 +68,13 @@ def start_consumer():
         try:
             payload = json.loads(body.decode("utf-8"))
 
-            tenant_id = payload.get("tenant_id", "public")
+            tenant_id = "public"
             order_id = payload.get("order_id")
             payment_id = payload.get("payment_id")
             payment_status = payload.get("payment_status")
             user_id = payload.get("user_id", "unknown")
             amount = payload.get("amount")
+            print("Callback Notif")
 
             with get_db(schema=tenant_id) as db:
                 try:
